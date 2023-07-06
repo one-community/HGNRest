@@ -34,9 +34,9 @@ const userHelper = function () {
     let mm = today.getMonth() + 1;
     let dd = today.getDate();
 
-    mm < 10 ? mm = `0${ mm}` : mm;
-    dd < 10 ? dd = `0${ dd}` : dd;
-    const formatedDate = `${yyyy }-${ mm }-${ dd}`;
+    mm = mm < 10 ? `0${mm}` : mm;
+    dd = dd < 10 ? `0${dd}` : dd;
+    const formatedDate = `${yyyy}-${mm}-${dd}`;
 
     return formatedDate;
   };
@@ -185,7 +185,10 @@ const userHelper = function () {
                 ${summary}
               </div>
             `;
-          } else if (weeklySummaryOption === 'Not Required' || (!weeklySummaryOption && result.weeklySummaryNotReq)) {
+          } else if (
+            weeklySummaryOption === 'Not Required'
+            || (!weeklySummaryOption && result.weeklySummaryNotReq)
+          ) {
             weeklySummaryMessage = weeklySummaryNotRequiredMessage;
           }
         }
@@ -281,8 +284,9 @@ const userHelper = function () {
     try {
       const currentFormattedDate = moment().tz('America/Los_Angeles').format();
 
-
-      logger.logInfo(`Job for assigning blue square for commitment not met starting at ${currentFormattedDate}`);
+      logger.logInfo(
+        `Job for assigning blue square for commitment not met starting at ${currentFormattedDate}`,
+      );
 
       const pdtStartOfLastWeek = moment()
         .tz('America/Los_Angeles')
@@ -351,7 +355,10 @@ const userHelper = function () {
           { new: true },
         );
 
-        if (updateResult?.weeklySummaryOption === 'Not Required' || updateResult?.weeklySummaryNotReq) {
+        if (
+          updateResult?.weeklySummaryOption === 'Not Required'
+          || updateResult?.weeklySummaryNotReq
+        ) {
           hasWeeklySummary = true;
         }
 
@@ -383,9 +390,13 @@ const userHelper = function () {
 
         if (timeNotMet || !hasWeeklySummary) {
           if (timeNotMet && !hasWeeklySummary) {
-            description = `System auto-assigned infringement for two reasons: not meeting weekly volunteer time commitment as well as not submitting a weekly summary. For the hours portion, you logged ${timeSpent} hours against committed effort of ${weeklycommittedHours} hours in the week starting ${pdtStartOfLastWeek.format('dddd YYYY-MM-DD')} and ending ${pdtEndOfLastWeek.format('dddd YYYY-MM-DD')}.`;
+            description = `System auto-assigned infringement for two reasons: not meeting weekly volunteer time commitment as well as not submitting a weekly summary. For the hours portion, you logged ${timeSpent} hours against committed effort of ${weeklycommittedHours} hours in the week starting ${pdtStartOfLastWeek.format(
+              'dddd YYYY-MM-DD',
+            )} and ending ${pdtEndOfLastWeek.format('dddd YYYY-MM-DD')}.`;
           } else if (timeNotMet) {
-            description = `System auto-assigned infringement for not meeting weekly volunteer time commitment. You logged ${timeSpent} hours against committed effort of ${weeklycommittedHours} hours in the week starting ${pdtStartOfLastWeek.format('dddd YYYY-MM-DD')} and ending ${pdtEndOfLastWeek.format('dddd YYYY-MM-DD')}.`;
+            description = `System auto-assigned infringement for not meeting weekly volunteer time commitment. You logged ${timeSpent} hours against committed effort of ${weeklycommittedHours} hours in the week starting ${pdtStartOfLastWeek.format(
+              'dddd YYYY-MM-DD',
+            )} and ending ${pdtEndOfLastWeek.format('dddd YYYY-MM-DD')}.`;
           } else {
             description = `System auto-assigned infringement for not submitting a weekly summary for the week starting ${pdtStartOfLastWeek.format(
               'dddd YYYY-MM-DD',
@@ -490,19 +501,21 @@ const userHelper = function () {
     try {
       const currentDate = moment().tz('America/Los_Angeles').format();
 
-      logger.logInfo(`Job for applying missed hours for Core Team members starting at ${currentDate}`);
+      logger.logInfo(
+        `Job for applying missed hours for Core Team members starting at ${currentDate}`,
+      );
 
       const startOfLastWeek = moment()
-      .tz('America/Los_Angeles')
-      .startOf('week')
-      .subtract(1, 'week')
-      .format('YYYY-MM-DD');
+        .tz('America/Los_Angeles')
+        .startOf('week')
+        .subtract(1, 'week')
+        .format('YYYY-MM-DD');
 
       const endOfLastWeek = moment()
-      .tz('America/Los_Angeles')
-      .endOf('week')
-      .subtract(1, 'week')
-      .format('YYYY-MM-DD');
+        .tz('America/Los_Angeles')
+        .endOf('week')
+        .subtract(1, 'week')
+        .format('YYYY-MM-DD');
 
       const missedHours = await userProfile.aggregate([
         {
@@ -731,13 +744,21 @@ const userHelper = function () {
   };
 
   const increaseBadgeCount = async function (personId, badgeId) {
-    userProfile.updateOne({ _id: personId, 'badgeCollection.badge': badgeId },
-    { $inc: { 'badgeCollection.$.count': 1 }, $set: { 'badgeCollection.$.lastModified': Date.now().toString() }, $push: { 'badgeCollection.$.earnedDate': earnedDateBadge() } },
-    (err) => {
-      if (err) {
-        console.log(err);
-      }
-    });
+    userProfile.updateOne(
+      { _id: personId, 'badgeCollection.badge': badgeId },
+      {
+        $inc: { 'badgeCollection.$.count': 1 },
+        $set: { 'badgeCollection.$.lastModified': Date.now().toString() },
+        $push: { 'badgeCollection.$.earnedDate': earnedDateBadge() },
+      },
+      (err) => {
+        if (err) {
+          throw new Error(
+            `Failed to increase badge count for personId: ${personId}, badgeId: ${badgeId}. Error: ${err}`,
+          );
+        }
+      },
+    );
   };
 
   const addBadge = async function (
@@ -752,9 +773,11 @@ const userHelper = function () {
       {
         $push: {
           badgeCollection: {
-
-            badge: badgeId, count, earnedDate: [earnedDateBadge()], featured, lastModified: Date.now().toString(),
-
+            badge: badgeId,
+            count,
+            earnedDate: [earnedDateBadge()],
+            featured,
+            lastModified: Date.now().toString(),
           },
         },
       },
@@ -806,7 +829,6 @@ const userHelper = function () {
   // remove the last badge you earned on this streak(not including 1)
   const removePrevHrBadge = async function (
     personId,
-    user,
     badgeCollection,
     hrs,
     weeks,
@@ -1304,7 +1326,15 @@ const userHelper = function () {
   // 'Total Hrs in Category'
   const checkTotalHrsInCat = async function (personId, user, badgeCollection) {
     const hoursByCategory = user.hoursByCategory || {};
-    const categories = ['food', 'energy', 'housing', 'education', 'society', 'economics', 'stewardship'];
+    const categories = [
+      'food',
+      'energy',
+      'housing',
+      'education',
+      'society',
+      'economics',
+      'stewardship',
+    ];
 
     const badgesOfType = [];
     for (let i = 0; i < badgeCollection.length; i += 1) {
@@ -1314,8 +1344,9 @@ const userHelper = function () {
     }
 
     categories.forEach(async (category) => {
-      const categoryHrs = Object.keys(hoursByCategory).find(elem => elem === category);
-
+      const categoryHrs = Object.keys(hoursByCategory).find(
+        elem => elem === category,
+      );
 
       let badgeOfType;
       for (let i = 0; i < badgeCollection.length; i += 1) {
@@ -1340,9 +1371,9 @@ const userHelper = function () {
         }
       }
 
-
       const newCatg = category.charAt(0).toUpperCase() + category.slice(1);
-      await badge.find({ type: 'Total Hrs in Category', category: newCatg })
+      await badge
+        .find({ type: 'Total Hrs in Category', category: newCatg })
         .sort({ totalHrs: -1 })
         .then((results) => {
           if (!Array.isArray(results) || !results.length || !categoryHrs) {
@@ -1350,7 +1381,10 @@ const userHelper = function () {
           }
 
           results.every((elem) => {
-            if (hoursByCategory[categoryHrs] > 0 && hoursByCategory[categoryHrs] >= elem.totalHrs) {
+            if (
+              hoursByCategory[categoryHrs] > 0
+              && hoursByCategory[categoryHrs] >= elem.totalHrs
+            ) {
               let theBadge;
               for (let i = 0; i < badgesOfType.length; i += 1) {
                 if (badgesOfType[i]._id.toString() === elem._id.toString()) {
