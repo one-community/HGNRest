@@ -1,9 +1,11 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-await-in-loop */
+
 const mongoose = require("mongoose");
 const moment = require("moment-timezone");
 const _ = require("lodash");
 const userProfile = require("../models/userProfile");
+const summaryGroup = require("../models/summaryGroup");
 const timeEntries = require("../models/timeentry");
 const badge = require("../models/badge");
 const myTeam = require("./helperModels/myTeam");
@@ -34,10 +36,8 @@ const userHelper = function() {
     let mm = today.getMonth() + 1;
     let dd = today.getDate();
 
-
     mm = mm < 10 ? `0${ mm}` : mm;
     dd = dd < 10 ? `0${ dd}` : dd;
-
     const formatedDate = `${yyyy }-${ mm }-${ dd}`;
 
 
@@ -48,6 +48,7 @@ const userHelper = function() {
     const userid = mongoose.Types.ObjectId(userId);
     return userProfile.findById(userid, "firstName lastName");
   };
+
 
   const validateProfilePic = function(profilePic) {
     const picParts = profilePic.split("base64");
@@ -134,6 +135,7 @@ const userHelper = function() {
 
       const weeklySummaryNotProvidedMessage =
         '<div><b>Weekly Summary:</b> <span style="color: red;"> Not provided! </span> </div>';
+
 
       const weeklySummaryNotRequiredMessage =
         '<div><b>Weekly Summary:</b> <span style="color: green;"> Not required for this user </span></div>';
@@ -323,7 +325,6 @@ const userHelper = function() {
         .tz("America/Los_Angeles")
         .endOf("week")
         .subtract(1, "week");
-
 
       const users = await userProfile.find(
         { isActive: true },
@@ -687,7 +688,11 @@ const userHelper = function() {
       );
       for (let i = 0; i < users.length; i += 1) {
         const user = users[i];
-        if (moment().isSameOrAfter(moment(user.reactivationDate))) {
+        if (
+          moment().add(2, "days").isSameOrAfter(moment(user.reactivationDate))
+        ) {
+          console.log(moment(user.reactivationDate));
+          console.log(user.reactivationDate);
           await userProfile.findByIdAndUpdate(
             user._id,
             {
@@ -732,7 +737,6 @@ const userHelper = function() {
       logger.logException(err);
     }
   };
-
 
   const notifyInfringements = function (original, current, firstName, lastName, emailAddress) {
 
@@ -802,11 +806,7 @@ const userHelper = function() {
       {
         $push: {
           badgeCollection: {
-
-
-
             badge: badgeId, count, earnedDate: [earnedDateBadge()], featured, lastModified: Date.now().toString(),
-
           },
         },
 
@@ -1328,7 +1328,6 @@ const userHelper = function() {
         elem => elem === category
       );
 
-
       let badgeOfType;
       for (let i = 0; i < badgeCollection.length; i += 1) {
         if (
@@ -1353,8 +1352,6 @@ const userHelper = function() {
       }
 
       const newCatg = category.charAt(0).toUpperCase() + category.slice(1);
-
-
       await badge.find({ type: 'Total Hrs in Category', category: newCatg })
 
         .sort({ totalHrs: -1 })
@@ -1494,6 +1491,130 @@ const userHelper = function() {
       logger.logException(err);
     }
   };
+
+  const executeSummaryGroupHelper = async function () {
+    try {
+      const validSummaryGroups = await summaryGroup.find(
+        {
+          isActive: true,
+          summaryReceivers: { $ne: [] },
+          teamMembers: { $ne: [] },
+        },
+        "_id summaryGroupName summaryReceivers teamMembers"
+      );
+
+      for (let i = 0; i < validSummaryGroups.length; i++) {
+        const validSummaryGroup = validSummaryGroups[i];
+        const { summaryGroupName } = validSummaryGroup;
+        const { summaryReceivers } = validSummaryGroup;
+
+        const summaryReceiverEmails = summaryReceivers.map(
+          (receiver) => receiver.email
+        );
+        console.log("summaryReceiverEmails", summaryReceiverEmails);
+
+        const { teamMembers } = validSummaryGroup;
+
+        const emails = [];
+        let emailBody = `<h2>Weekly Summaries for ${summaryGroupName}:</h2>`;
+        const weeklySummaryNotProvidedMessage =
+          '<div><b>Weekly Summary:</b> <span style="color: red;"> Not provided! </span> </div>';
+
+        const weeklySummaryNotRequiredMessage =
+          '<div><b>Weekly Summary:</b> <span style="color: magenta;"> Not required for this user </span></div>';
+        for (let i = 0; i < teamMembers.length; i += 1) {
+          const teamMember = teamMembers[i];
+          const userId = mongoose.Types.ObjectId(teamMember._id);
+          const { fullName } = teamMember;
+
+          const userProfileDocument = await userProfile
+            .findById(userId)
+            .select({
+              weeklySummaries: 1,
+              lastWeekTangibleHrs: 1,
+              mediaUrl: 1,
+              weeklySummariesCount: 1,
+            });
+
+          const {
+            weeklySummaries,
+            lastWeekTangibleHrs,
+            mediaUrl,
+            weeklySummariesCount,
+          } = userProfileDocument;
+
+          // weeklySummaries array will have only one item fetched (if present),
+          // consequently totalSeconds array will also have only one item in the array (if present)
+          // hence totalSeconds[0] should be used
+          const hoursLogged =
+            lastWeekTangibleHrs && lastWeekTangibleHrs.totalSeconds
+              ? lastWeekTangibleHrs.totalSeconds[0] / 3600
+              : 0;
+
+          const mediaUrlLink = mediaUrl
+            ? `<a href="${mediaUrl}">${mediaUrl}</a>`
+            : "Not provided!";
+
+          let weeklySummaryMessage = weeklySummaryNotProvidedMessage;
+
+          // weeklySummaries array should only have one item if any, hence weeklySummaries[0] needs be used to access it.
+          if (Array.isArray(weeklySummaries) && weeklySummaries[0]) {
+            const { dueDate, summary } = weeklySummaries[0];
+            if (summary) {
+              weeklySummaryMessage = `
+                    <div>
+                      <b>Weekly Summary</b>
+                      (for the week ending on <b>${moment(dueDate)
+                        .tz("America/Los_Angeles")
+                        .format("YYYY-MMM-DD")}</b>):
+                    </div>
+                    <div data-pdfmake="{&quot;margin&quot;:[20,0,20,0]}">
+                      ${summary}
+                    </div>
+                  `;
+            } else if (weeklySummariesCount === 0) {
+              weeklySummaryMessage = weeklySummaryNotRequiredMessage;
+            }
+          }
+
+          emailBody += `
+              \n
+              <div style="padding: 20px 0; margin-top: 5px; border-bottom: 1px solid #828282;">
+                <b>Name:</b> ${fullName} 
+                <p>
+                  <b>Media URL:</b> ${
+                    mediaUrlLink ||
+                    '<span style="color: red;">Not provided!</span>'
+                  }
+                </p>
+                ${
+                  weeklySummariesCount === 8
+                    ? `<p style="color: blue;"><b>Total Valid Weekly Summaries: ${weeklySummariesCount}</b></p>`
+                    : `<p><b>Total Valid Weekly Summaries</b>: ${
+                        weeklySummariesCount || "No valid submissions yet!"
+                      }</p>`
+                }
+                ${
+                  hoursLogged >= weeklycommittedHours
+                    ? `<p><b>Hours logged</b>: ${hoursLogged.toFixed(
+                        2
+                      )} / ${weeklycommittedHours}</p>`
+                    : `<p style="color: red;"><b>Hours logged</b>: ${hoursLogged.toFixed(
+                        2
+                      )} / ${weeklycommittedHours}</p>`
+                }
+                ${weeklySummaryMessage}
+              </div>`;
+        }
+        const emailSubject = `Weekly Summaries for ${summaryGroupName} Summary Group...`;
+
+        emailSender(summaryReceiverEmails, emailSubject, emailBody, null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return {
     getUserName,
     getTeamMembers,
@@ -1507,6 +1628,7 @@ const userHelper = function() {
     getInfringementEmailBody,
     emailWeeklySummariesForAllUsers,
     awardNewBadges,
+    executeSummaryGroupHelper,
     getTangibleHoursReportedThisWeekByUserId
   };
 };

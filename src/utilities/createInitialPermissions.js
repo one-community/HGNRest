@@ -44,6 +44,7 @@ const permissionsRoles = [
       'updatePassword',
       'deleteUserProfile',
       'infringementAuthorizer',
+      'seeSummaryManagement',
       // WBS
       'postWbs',
       'deleteWbs',
