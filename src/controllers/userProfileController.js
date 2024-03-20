@@ -279,13 +279,23 @@ const userProfileController = function (UserProfile) {
 
   const putUserProfile = async function (req, res) {
     const userid = req.params.userId;
-    const isRequestorAuthorized = !!(
-      canRequestorUpdateUser(req.body.requestor.requestorId, userid)
-      && ((await hasPermission(req.body.requestor, 'putUserProfile'))
-        || req.body.requestor.requestorId === userid)
+
+
+    const canToggleRequestBio = await hasPermission(req.body.requestor, 'requestBio');
+    const isRequestorAuthorized = (!!(
+      canRequestorUpdateUser(req.body.requestor.requestorId, userid) && (
+        await hasPermission(req.body.requestor, 'putUserProfile'))
+        || req.body.requestor.requestorId === userid
+      )
     );
 
-    if (!isRequestorAuthorized) {
+    const canEditTeamCode = req.body.requestor.role === 'Owner'
+      || req.body.requestor.role === 'Administrator'
+      || req.body.requestor.permissions?.frontPermissions.includes('editTeamCode');
+
+    if (!isRequestorAuthorized && !canToggleRequestBio) {
+        {
+
       res.status(403).send('You are not authorized to update this user');
       return;
     }
@@ -325,6 +335,12 @@ const userProfileController = function (UserProfile) {
         res.status(403).send('You are not authorized to edit team code.');
         return;
       }
+      if(!canToggleRequestBio && (record.bioPosted !== req.body.bioPosted || 'default')){
+        res.status(403).send("You are not authorized to toggle request bio");
+        return;
+      }
+      record.teamCode = req.body.teamCode;
+
 
       const originalinfringements = record.infringements
         ? record.infringements
@@ -365,6 +381,7 @@ const userProfileController = function (UserProfile) {
       });
 
       record.lastModifiedDate = Date.now();
+
 
       // find userData in cache
       const isUserInCache = cache.hasCache('allusers');
