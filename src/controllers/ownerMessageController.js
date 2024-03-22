@@ -1,3 +1,5 @@
+const hasPermission = require("../utilities/permissions");
+
 const ownerMessageController = function (OwnerMessage) {
   const getOwnerMessage = async function (req, res) {
     try {
@@ -15,7 +17,10 @@ const ownerMessageController = function (OwnerMessage) {
   };
 
   const updateOwnerMessage = async function (req, res) {
-    if (req.body.requestor.role !== 'Owner') {
+    
+    const canEditHeaderMessage = hasPermission(req.body.requestor, 'editHeaderMessage');
+    
+    if (!canEditHeaderMessage) {
       res.status(403).send('You are not authorized to create messages!');
     }
     const { isStandard, newMessage } = req.body;

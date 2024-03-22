@@ -280,9 +280,12 @@ const userProfileController = function (UserProfile) {
   const putUserProfile = async function (req, res) {
     const userid = req.params.userId;
     const isRequestorAuthorized = !!(
-      canRequestorUpdateUser(req.body.requestor.requestorId, userid)
-      && ((await hasPermission(req.body.requestor, 'putUserProfile'))
-        || req.body.requestor.requestorId === userid)
+
+      canRequestorUpdateUser(req.body.requestor.requestorId, userid) && (
+        await hasPermission(req.body.requestor, 'putUserProfile')
+        || (await hasPermission(req.body.requestor, "modifyBadgeAmount")) || req.body.requestor.requestorId === userid
+      )
+
     );
 
     if (!isRequestorAuthorized) {
@@ -430,7 +433,7 @@ const userProfileController = function (UserProfile) {
           // If their last update was made today, remove that
           const lasti = record.weeklycommittedHoursHistory.length - 1;
           const lastChangeDate = moment(
-            record.weeklycommittedHoursHistory[lasti].dateChanged,
+          record.weeklycommittedHoursHistory[lasti].dateChanged,
           );
           const now = moment();
 
