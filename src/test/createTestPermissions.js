@@ -50,7 +50,6 @@ const permissionsRoles = [
       'updateSummaryRequirements',
       'changeUserStatus',
       'updatePassword',
-      'resetPassword',
       'deleteUserProfile',
       'addInfringements',
       'editInfringements',
