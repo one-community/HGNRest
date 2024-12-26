@@ -128,6 +128,9 @@ const blueSquareEmailAssignmentRouter = require('../routes/BlueSquareEmailAssign
   userProfile,
 );
 
+// bidding dashboard
+const biddingLoginRouter = require('../routes/biddingdashboard/biddingLoginRouter')();
+
 module.exports = function (app) {
   app.use('/api', forgotPwdRouter);
   app.use('/api', loginRouter);
@@ -178,4 +181,6 @@ module.exports = function (app) {
   app.use('/api/bm', bmEquipmentRouter);
   app.use('/api/bm', bmConsumablesRouter);
   app.use('api', bmIssueRouter);
+  // bm dashboard
+  app.use('/api/bidding', biddingLoginRouter);
 };
