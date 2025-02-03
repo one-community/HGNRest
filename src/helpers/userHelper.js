@@ -30,6 +30,7 @@ const { NEW_USER_BLUE_SQUARE_NOTIFICATION_MESSAGE } = require('../constants/mess
 const timeUtils = require('../utilities/timeUtils');
 
 const userHelper = function () {
+
   // Update format to "MMM-DD-YY" from "YYYY-MMM-DD" (Confirmed with Jae)
   const earnedDateBadge = () => {
     const currentDate = new Date(Date.now());
@@ -2246,6 +2247,39 @@ const userHelper = function () {
     }
   };
 
+  const submitWeeklySummary = async (userId, summaryText) => {
+    try {
+      const user = await userProfile.findById(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+      const currentWeekEnd = moment().tz('America/Los_Angeles').endOf('week').toDate();
+      const existingSummary = user.weeklySummaries.find(
+        (summary) => moment(summary.dueDate).isSame(currentWeekEnd, 'day')
+      );
+  
+      if (existingSummary) {
+        existingSummary.summary = summaryText;
+        existingSummary.uploadDate = new Date(); // Track upload date
+      } else {
+        user.weeklySummaries.push({
+          dueDate: currentWeekEnd,
+          summary: summaryText,
+          uploadDate: new Date(),
+        });
+      }
+      user.summarySubmissionDates.push(new Date());
+  
+      await user.save();
+  
+      return { success: true, message: 'Summary submitted and submission date recorded successfully' };
+    } catch (error) {
+      console.error('Error submitting weekly summary:', error);
+      return { success: false, message: error.message };
+    }
+  };
+  
+
   return {
     changeBadgeCount,
     getUserName,
@@ -2266,6 +2300,7 @@ const userHelper = function () {
     getTangibleHoursReportedThisWeekByUserId,
     deleteExpiredTokens,
     deleteOldTimeOffRequests,
+    submitWeeklySummary,
   };
 };
 
